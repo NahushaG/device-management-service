@@ -109,3 +109,24 @@ All endpoints are versioned under:
     Delete a device
 
 ------------------------------------------------------------------------
+## Implementation Roadmap / TODO
+
+The following items describe the current implementation status and
+planned improvements.
+
+### Completed
+- [x] Project setup
+- [x] API contract definition & OpenAPI integration
+- [x] Model and repository implementation
+- [x] Service integration with controller
+- [x] Controller and service test cases
+- [x] Core functionality testing locally
+
+### Planned / In Progress
+- [ ] Request validation (Bean Validation)
+- [ ] Global exception handler
+- [ ] Standardized error responses 
+- [ ] Repository tests (`@DataJpaTest`)
+- [ ] Integration tests (Testcontainers)
+- [ ] Docker Compose file
+- [ ] Readme Completion

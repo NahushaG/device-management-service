@@ -13,3 +13,6 @@ target/
 
 # Logs
 *.log
+
+#Env file
+.env

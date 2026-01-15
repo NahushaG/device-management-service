@@ -15,7 +15,7 @@ import lombok.Setter;
 public class Device {
 
   @Id
-  @GeneratedValue
+  @GeneratedValue(strategy = GenerationType.UUID)
   @Column(nullable = false, updatable = false)
   private UUID id;
 
@@ -40,7 +40,6 @@ public class Device {
   @PrePersist
   void prePersist() {
     if (createdAt == null) createdAt = Instant.now();
-    if (state == null) state = DeviceState.AVAILABLE;
   }
 
 }

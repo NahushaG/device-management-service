@@ -184,13 +184,13 @@ class DeviceControllerTest {
   }
 
   @Test
-  void delete_whenDomainViolation_returns422() throws Exception {
+  void delete_whenDomainViolation_returns409() throws Exception {
     UUID id = UUID.randomUUID();
     doThrow(new DomainValidationException("IN_USE devices cannot be deleted."))
         .when(service).delete(id);
 
     mvc.perform(delete("/v1/devices/{id}", id))
-        .andExpect(status().isUnprocessableEntity())
+        .andExpect(status().isConflict())
         .andExpect(jsonPath("$.title").value("Domain validation failed"))
         .andExpect(jsonPath("$.errorCode").value("DOMAIN_VALIDATION"));
   }

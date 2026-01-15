@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(DomainValidationException.class)
   public ProblemDetail handleDomain(DomainValidationException ex) {
-    ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+    ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.CONFLICT);
     pd.setTitle("Domain validation failed");
     pd.setDetail(ex.getMessage());
     pd.setType(URI.create("about:blank"));

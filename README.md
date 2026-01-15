@@ -15,6 +15,7 @@ designed with **production-readiness, testability, and extensibility** in mind.
 - Domain Model
 - Business Rules
 - API Design
+- API Contract Notes
 - Error Handling
 - Build & Run
 - OpenAPI Documentation
@@ -63,9 +64,6 @@ Key goals of the implementation:
 Controller → Service → Repository → Database
 ```
 
-The layered architecture ensures separation of concerns, maintainability,
-and ease of testing.
-
 ---
 
 ## Domain Model
@@ -94,24 +92,21 @@ and ease of testing.
 
 ---
 
-## API Design
+## API Contract Notes
 
-- RESTful, resource-oriented endpoints
-- Explicit versioning via `/v1`
-- Consistent HTTP status codes
-- Validation-driven request handling
+- `state` is **mandatory** when creating a device.
+- `createdAt` is system-managed and cannot be provided or modified by clients.
+- **PUT** performs a full update and overwrites all mutable fields.
+- **PATCH** performs a partial update; empty PATCH is rejected.
+- Domain rule violations return **409 Conflict**.
+- Invalid UUIDs or malformed requests return **400 Bad Request**.
+- Non-existing resources return **404 Not Found**.
 
 ---
 
 ## Error Handling
 
-The API uses **RFC 7807 – Problem Details for HTTP APIs** for all error responses.
-
-Common scenarios:
-- Validation failures → `400 Bad Request`
-- Invalid UUID format → `400 Bad Request`
-- Resource not found → `404 Not Found`
-- Domain rule violation → `409 Conflict`
+The API uses **RFC 7807 – Problem Details for HTTP APIs**.
 
 ---
 
@@ -120,30 +115,22 @@ Common scenarios:
 ### Prerequisites
 
 - Java 21+
-- Maven 3.9+ (or Maven Wrapper `./mvnw`)
+- Maven 3.9+
 - Docker & Docker Compose
 
----
-
-### Run with Docker Compose (recommended)
-
-Runs the full stack (application + PostgreSQL) in containers.
+### Run with Docker Compose
 
 ```bash
 docker compose up --build -d
 ```
 
-Access:
-- Swagger UI: http://localhost:8080/swagger-ui/index.html
-- API Base URL: http://localhost:8080/v1
-
-Stop services:
+Stop:
 
 ```bash
 docker compose down
 ```
 
-Reset database:
+Reset DB:
 
 ```bash
 docker compose down -v
@@ -151,52 +138,41 @@ docker compose down -v
 
 ---
 
-## OpenAPI / Swagger Documentation
+## OpenAPI Documentation
 
-The API is fully documented using **OpenAPI 3**.
-
-- Swagger UI  
-  http://localhost:8080/swagger-ui/index.html
-
-- OpenAPI specification  
-  http://localhost:8080/v3/api-docs
-
-Includes:
-- Endpoints
-- Request/response schemas
-- Validation constraints
-- Error responses
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- OpenAPI spec: http://localhost:8080/v3/api-docs
 
 ---
 
 ## Testing Strategy
 
-| Layer | Approach |
-|------|---------|
-| Controller | `@WebMvcTest` |
+| Layer | Tool |
+|------|------|
+| Controller | @WebMvcTest |
 | Service | Unit tests |
-| Repository | `@DataJpaTest` |
-| Integration | `@SpringBootTest` + Testcontainers |
+| Repository | @DataJpaTest |
+| Integration | Testcontainers |
 
 ---
 
 ## Manual API Test Matrix
 
-| Method | Scenario | Expected Result |
-|------|----------|-----------------|
-| POST | Valid device | 201 Created |
-| POST | Invalid enum value | 400 Bad Request |
-| GET | Non-existing device | 404 Not Found |
-| PATCH | Empty request body | 400 Bad Request |
-| DELETE | Device in IN_USE state | 409 Conflict |
+| Method | Scenario | Expected |
+|------|----------|----------|
+| POST | Valid device | 201 |
+| POST | Invalid enum | 400 |
+| GET | Not found | 404 |
+| PATCH | Empty body | 400 |
+| DELETE | IN_USE device | 409 |
 
 ---
 
 ## Docker & Docker Compose
 
-- Application and database run in separate containers
-- Environment variables externalized via `.env`
-- Flyway migrations applied on startup
+- App and DB in separate containers
+- Environment variables externalized
+- Flyway migrations on startup
 
 ---
 
@@ -206,38 +182,34 @@ Includes:
 
 - CRUD APIs
 - Domain validations
-- Global exception handling
-- Standardized error responses
+- Exception handling
 - Repository & integration tests
-- Docker image and Compose setup
+- Docker setup
 
 ---
 
 ## Future Enhancements
 
 ### Security
-- OAuth2 / OpenID Connect
-- Role-Based Access Control (RBAC)
-- API rate limiting
+- OAuth2 / OIDC
+- RBAC
+- Rate limiting
 
 ### Scalability
-- Pagination and sorting
+- Pagination
 - Horizontal scaling
 - Read replicas
 
-### Non-Blocking Architecture
+### Non-Blocking
 - Spring WebFlux
-- Reactive database access
+- Reactive DB access
 
 ### Observability
-- Metrics (Micrometer + Prometheus)
-- Distributed tracing (OpenTelemetry)
-- Centralized logging
+- Metrics, tracing, centralized logging
 
 ---
 
 ## Notes for Reviewers
 
-This project was implemented as part of a technical assessment.
-The focus was on correctness, clarity, testability, and production readiness,
-while leaving clear paths for future enhancements.
+This project was implemented as part of a technical assessment
+with focus on correctness, clarity, and production readiness.

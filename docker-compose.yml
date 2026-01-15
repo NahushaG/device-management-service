@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16
+    container_name: devices-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-devicesdb}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-devicesdb}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - devices_pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: device-management-service
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+
+      # Spring datasource from env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-devicesdb}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+
+      # Flyway
+      SPRING_FLYWAY_ENABLED: "true"
+
+      # Hibernate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+
+volumes:
+  devices_pgdata:

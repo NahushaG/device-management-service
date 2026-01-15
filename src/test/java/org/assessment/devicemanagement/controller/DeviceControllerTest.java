@@ -3,6 +3,7 @@ package org.assessment.devicemanagement.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.assessment.devicemanagement.exception.DomainValidationException;
+import org.assessment.devicemanagement.exception.NotFoundException;
 import org.assessment.devicemanagement.model.Device;
 import org.assessment.devicemanagement.model.DeviceState;
 import org.assessment.devicemanagement.service.DeviceService;
@@ -164,5 +167,42 @@ class DeviceControllerTest {
         .andExpect(status().isNoContent());
 
     verify(service).delete(id);
+  }
+
+  @Test
+  void create_withBlankName_returns400_withProblemDetail() throws Exception {
+    mvc.perform(post("/v1/devices")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+              {"name":"","brand":"Apple","state":"AVAILABLE"}
+              """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("Request validation failed"))
+        .andExpect(jsonPath("$.errorCode").value("REQUEST_VALIDATION"))
+        .andExpect(jsonPath("$.errors").isArray())
+        .andExpect(jsonPath("$.errors[0].field").exists());
+  }
+
+  @Test
+  void delete_whenDomainViolation_returns422() throws Exception {
+    UUID id = UUID.randomUUID();
+    doThrow(new DomainValidationException("IN_USE devices cannot be deleted."))
+        .when(service).delete(id);
+
+    mvc.perform(delete("/v1/devices/{id}", id))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.title").value("Domain validation failed"))
+        .andExpect(jsonPath("$.errorCode").value("DOMAIN_VALIDATION"));
+  }
+
+  @Test
+  void getById_whenNotFound_returns404() throws Exception {
+    UUID id = UUID.randomUUID();
+    when(service.get(id)).thenThrow(new NotFoundException("Device not found: " + id));
+
+    mvc.perform(get("/v1/devices/{id}", id))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"))
+        .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
   }
 }

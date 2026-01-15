@@ -1,7 +1,7 @@
 # Device Management Service
 
 The **Device Management Service** is a RESTful backend application that provides
-CRUD and lifecycle management capabilities for devices.  
+CRUD and lifecycle management capabilities for devices.
 It enforces **strict domain rules**, exposes a **clean, versioned API**, and is
 designed with **production-readiness, testability, and extensibility** in mind.
 
@@ -17,6 +17,7 @@ designed with **production-readiness, testability, and extensibility** in mind.
 - API Design
 - Error Handling
 - Build & Run
+- OpenAPI Documentation
 - Testing Strategy
 - Manual API Test Matrix
 - Docker & Docker Compose
@@ -43,14 +44,14 @@ Key goals of the implementation:
 ## Tech Stack
 
 | Category | Technology |
-|-------|------------|
+|--------|------------|
 | Language | Java 21 |
-| Framework | Spring Boot 3.5.9 |
+| Framework | Spring Boot 3.5.x |
 | Build Tool | Maven |
-| Database | PostgreSQL 16 |
+| Database | PostgreSQL |
 | ORM | Spring Data JPA / Hibernate |
 | Migrations | Flyway |
-| API Docs | OpenAPI / Swagger |
+| API Docs | OpenAPI 3 / Swagger |
 | Testing | JUnit 5, Mockito, Testcontainers |
 | Containerization | Docker, Docker Compose |
 
@@ -62,7 +63,8 @@ Key goals of the implementation:
 Controller → Service → Repository → Database
 ```
 
-Responsibilities are clearly separated to ensure maintainability and testability.
+The layered architecture ensures separation of concerns, maintainability,
+and ease of testing.
 
 ---
 
@@ -82,32 +84,34 @@ Responsibilities are clearly separated to ensure maintainability and testability
 
 ## Business Rules
 
-- `createdAt` is immutable
-- When device is `IN_USE`:
-    - name and brand cannot be updated
-    - device cannot be deleted
-- PUT replaces all mutable fields
-- PATCH updates only provided fields
-- Empty PATCH requests are rejected
+- `createdAt` is immutable after creation
+- When a device is in `IN_USE` state:
+  - `name` and `brand` cannot be updated
+  - the device cannot be deleted
+- **PUT** replaces all mutable fields
+- **PATCH** updates only provided fields
+- Empty PATCH requests are rejected with `400 Bad Request`
 
 ---
 
-## API Endpoints
+## API Design
 
-| Method | Endpoint | Description |
-|------|----------|-------------|
-| POST | /v1/devices | Create device |
-| GET | /v1/devices/{id} | Get device |
-| GET | /v1/devices | List devices |
-| PUT | /v1/devices/{id} | Full update |
-| PATCH | /v1/devices/{id} | Partial update |
-| DELETE | /v1/devices/{id} | Delete device |
+- RESTful, resource-oriented endpoints
+- Explicit versioning via `/v1`
+- Consistent HTTP status codes
+- Validation-driven request handling
 
 ---
 
 ## Error Handling
 
-Errors follow **RFC 7807 Problem Details** format.
+The API uses **RFC 7807 – Problem Details for HTTP APIs** for all error responses.
+
+Common scenarios:
+- Validation failures → `400 Bad Request`
+- Invalid UUID format → `400 Bad Request`
+- Resource not found → `404 Not Found`
+- Domain rule violation → `409 Conflict`
 
 ---
 
@@ -115,51 +119,34 @@ Errors follow **RFC 7807 Problem Details** format.
 
 ### Prerequisites
 
-* Java 21+
-* Maven 3.9+ (or Maven Wrapper `./mvnw`)
-* Docker & Docker Compose
-### Run with Docker Compose (Application + PostgreSQL)
+- Java 21+
+- Maven 3.9+ (or Maven Wrapper `./mvnw`)
+- Docker & Docker Compose
 
-This mode runs the full stack in containers and closely resembles a production setup.
+---
 
-#### Build and start all services
+### Run with Docker Compose (recommended)
+
+Runs the full stack (application + PostgreSQL) in containers.
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-#### Access the application
+Access:
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- API Base URL: http://localhost:8080/v1
 
-* Swagger UI:
-  [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-
-#### Stop services
+Stop services:
 
 ```bash
 docker compose down
 ```
 
-#### Reset database (fresh start)
+Reset database:
 
 ```bash
 docker compose down -v
-```
-
-
-## Quick API Test
-
-Create a device:
-
-```bash
-curl -X POST http://localhost:8080/v1/devices \
-  -H "Content-Type: application/json" \
-  -d '{"name":"iPhone 15","brand":"Apple","state":"AVAILABLE"}'
-```
-
-Fetch all devices:
-
-```bash
-curl http://localhost:8080/v1/devices
 ```
 
 ---
@@ -171,13 +158,13 @@ The API is fully documented using **OpenAPI 3**.
 - Swagger UI  
   http://localhost:8080/swagger-ui/index.html
 
-- OpenAPI JSON  
+- OpenAPI specification  
   http://localhost:8080/v3/api-docs
 
 Includes:
 - Endpoints
-- Schemas
-- Validation rules
+- Request/response schemas
+- Validation constraints
 - Error responses
 
 ---
@@ -185,23 +172,31 @@ Includes:
 ## Testing Strategy
 
 | Layer | Approach |
-|-----|----------|
-| Controller | @WebMvcTest |
+|------|---------|
+| Controller | `@WebMvcTest` |
 | Service | Unit tests |
-| Repository | @DataJpaTest |
-| Integration | Testcontainers |
+| Repository | `@DataJpaTest` |
+| Integration | `@SpringBootTest` + Testcontainers |
 
 ---
 
 ## Manual API Test Matrix
 
-| Method | Scenario | Expected |
-|------|----------|----------|
-| POST | Valid device | 201 |
-| POST | Invalid enum | 400 |
-| GET | Not found | 404 |
-| PATCH | Empty body | 400 |
-| DELETE | IN_USE device | 409 |
+| Method | Scenario | Expected Result |
+|------|----------|-----------------|
+| POST | Valid device | 201 Created |
+| POST | Invalid enum value | 400 Bad Request |
+| GET | Non-existing device | 404 Not Found |
+| PATCH | Empty request body | 400 Bad Request |
+| DELETE | Device in IN_USE state | 409 Conflict |
+
+---
+
+## Docker & Docker Compose
+
+- Application and database run in separate containers
+- Environment variables externalized via `.env`
+- Flyway migrations applied on startup
 
 ---
 
@@ -210,31 +205,39 @@ Includes:
 ### Completed
 
 - CRUD APIs
-- Validation
-- Exception handling
+- Domain validations
+- Global exception handling
+- Standardized error responses
 - Repository & integration tests
-- Docker setup
+- Docker image and Compose setup
 
 ---
 
 ## Future Enhancements
 
 ### Security
-- JWT / OAuth2
-- RBAC
-- Rate limiting
+- OAuth2 / OpenID Connect
+- Role-Based Access Control (RBAC)
+- API rate limiting
 
 ### Scalability
-- Pagination
+- Pagination and sorting
 - Horizontal scaling
 - Read replicas
 
-### Non-Blocking
+### Non-Blocking Architecture
 - Spring WebFlux
-- Reactive DB access
+- Reactive database access
 
 ### Observability
-- Metrics
-- Tracing
+- Metrics (Micrometer + Prometheus)
+- Distributed tracing (OpenTelemetry)
 - Centralized logging
 
+---
+
+## Notes for Reviewers
+
+This project was implemented as part of a technical assessment.
+The focus was on correctness, clarity, testability, and production readiness,
+while leaving clear paths for future enhancements.
